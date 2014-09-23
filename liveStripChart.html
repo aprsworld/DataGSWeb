@@ -1,0 +1,581 @@
+<html>
+<head>
+
+<style>
+
+#floaty{
+	background-color: #3366FF;
+	color:white;
+	width:300px;
+	position: fixed;
+	top: 10em;
+	left: 1em;
+	border: 2px solid #1A3380;
+	border-radius: 12px;
+	
+	
+}
+.floaty{
+	padding-left: 30px;
+	padding-right: 30px;
+
+}
+.tickLabel{
+	width:30px;
+}
+.float-title{
+	width: 800px;
+	left: 15px;
+	position: absolute;
+	  
+}
+
+.float-button{
+	width:100px;
+	left:500px;
+	position: absolute;
+	
+}
+
+#cover {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 10;
+	display: none;
+	background-color: #000000;
+	opacity: .7;
+	filter:progid:DXImageTransform.Microsoft.BasicImage(opacity=.7);
+}
+
+
+</style>
+
+<script language="javascript" type="text/javascript" src="resources/jquery-1.11.1.min.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jQueryRotate.2.2.js"></script>
+<script language="javascript" type="text/javascript" src="resources/date.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.ui.core.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.ui.widget.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.ui.mouse.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.ui.draggable.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.flot.js"></script>
+<script language="javascript" type="text/javascript" src="resources/jquery.flot.threshold.js"></script>
+
+<script>
+
+const urlNow = "http://192.168.10.130:8080/now.json";
+const urlTitles = "http://192.168.10.130:8080/channels.json";
+const urlHistory = "http://192.168.10.130:8080/history.json";
+const limit = 4320;//this number chosen because it is the amount of packets that will arrive within twelve hours. 6(packets a minute)*60(minutes an hour)*12(for twelve hours)
+var dataArray=[];
+var descArray=[];
+var nData=0;
+var disabled = [];
+var oldestX=0;
+var plots=[];
+var time=0;
+var chartCount=0;
+var leftScroll = 0;
+var scroll=true;
+
+function loadData(){ //loads data from JSON and updates the page
+	var url = urlNow;
+	var count=0;
+	$.getJSON(url, 
+		function(data) {
+			var count=0;
+			data.data.forEach(function(entry){	
+				if ( -1 == disabled.indexOf(parseInt( entry["channel"]) ) ) {
+				//var tempAr=dataArray[entry["channel"]];
+					if ( null == dataArray[entry["channel"]] ) {
+					 	//console.log("adding chart");					
+					
+						tempAr=[];
+						tempAr[0]=[entry["time"],entry["avg"]];
+						//addChart(entry["channel"]);
+						dataArray[entry["channel"]]=tempAr;
+						$("#wrapper").html("");
+						plot();
+					}else{
+						tempAr=[entry["time"],entry["avg"]];
+						dataArray[entry["channel"]].push(tempAr);
+					}
+				}
+				count++;
+			});
+			nData++;
+			updateCharts();
+			$('#ndata').html("nData: "+nData);
+			scrollToLeft();
+			$('#connection_warn').hide();
+
+	});
+	
+
+}
+
+function loadTitleData(){//gets title information and descriptions of the data
+
+	var url = urlTitles;
+	
+	$.getJSON(url, 
+		function(data) {
+			data.data.forEach(function(entry){	
+				descArray[entry.id]=entry;
+			});
+		loadHistory();
+		titleTick();
+	});
+	
+}
+
+function loadTitleDataMin(){//gets title information and descriptions of the data
+
+	var url = urlTitles;
+	
+	$.getJSON(url, 
+		function(data) {
+			data.data.forEach(function(entry){	
+				descArray[entry.id]=entry;
+			});
+	});
+}
+	
+function loadHistory(){
+	console.log("loading history");
+	var url = urlHistory;
+	
+	$.getJSON(url, 
+		function(data) {
+			var count=0;
+			data.history.forEach(function(entry){
+				
+				$.each(entry.data, function(index, value) {
+					var tempAr=dataArray[index];					
+					if ( null == tempAr ) {
+						tempAr=[];
+						tempAr[0]=[entry.time,value];
+						dataArray[index]=tempAr;
+						//plot();
+					}else{
+						tempAr=[entry.time,value];
+						dataArray[index].push(tempAr);
+					}
+				}); 
+				if ( oldestX>entry.time || 0 == oldestX ){
+					oldestX=entry.time;
+				}
+				nData++;
+			});
+			plot();
+			$('#ndata').html("nData: "+nData);
+		//	setTimeout(loadTick, 1000*10);
+			loadTick();
+			scrollToLeft();
+			$("#cover").hide();
+			console.log("Completed");
+	});
+
+}
+
+/*
+function loadDataFirst(){//this is run first to initialise data from the json page and to get the first packet
+	var url = "http://192.168.10.130:8080/now.json";
+	
+	$.getJSON(url, 
+		function(data) {
+			var count=0;
+			data.data.forEach(function(entry){	
+				dataArray[entry["channel"]]=[[entry["time"],entry["avg"]]];
+			});
+			oldestX=data.data[0].time;
+			plot();
+			nData++;
+
+	});
+
+}
+*/
+function addChart(entry){
+	if ( -1 == disabled.indexOf( parseInt( entry) ) ) {
+		var title = entry;
+		var units = "";
+		var precision = 0;
+		if ( descArray.hasOwnProperty(entry) ) {
+			title = descArray[entry].title;
+			units = descArray[entry].units;	
+			precision = descArray[entry].precision
+		}
+		//displayData = dataArray[entry][0][1];
+		/*
+		if ( precision >= 0 ) {
+			displayData=displayData.toFixed(precision);
+		}else{
+			var x = Math.pow(10,Math.abs(precision));
+			displayData = Math.round(displayData/x)*x;
+		}
+		*/
+		var html='<span id="drag'+entry+'"><h4 class="float-title">'+title+'</h4><div id="cont'+entry+'" style="width: 50px; height: 150px; padding: 40px 15px 15px 15px;"><div id="placeholder'+entry+'" style="width: 100%; height: 100%; font-size: 14px; line-height: 1em;"></div></div></span>'; 
+		var flHtml='<p class="floaty" id="pFlo'+entry+'"><span id="floaty'+entry+'"></span><button style="float:right;" onclick="disableChannel('+entry+')">disable</button></p>';		
+		$('#wrapper').append(html);
+		$('#floaty').append(flHtml);
+		//$('#floaty'+entry).html(title+":<br>"+displayData+" "+units);
+	}
+}
+
+function updateCharts(){//this updates the charts.
+	
+
+	/*plots.forEach(function(entry){ //doesn't work, may still use some of this code as a starting point
+		entry.setData();
+		entry.draw();	
+
+	});*/
+
+	
+	for ( var entry in dataArray ) {
+		if ( dataArray.hasOwnProperty(entry) ) {
+			//console.log("Key is " + entry + ", value is" + dataArray[entry]);
+			var title = entry;
+			var units = "";
+			var precision = 0;
+			if ( descArray.hasOwnProperty(entry) ) {
+				title = descArray[entry].title;
+				units = descArray[entry].units;	
+				precision = descArray[entry].precision
+			}
+			displayData = dataArray[entry][dataArray[entry].length-1][1];
+
+			if ( 0 <= precision ) {
+				displayData=displayData.toFixed(precision);
+			}else{
+				var x = Math.pow(10,Math.abs(precision));
+				displayData = Math.round(displayData/x)*x;
+			}
+
+			$('#floaty'+entry).html(title+":<br>"+displayData+" "+units);
+		
+			var data=[{
+				data: dataArray[entry],
+				bars: {
+					show: true,
+					barWidth: 90,
+					fill: 1,
+					align: "center"
+				},			
+	
+				//},
+				color: 'BLUE', // this marks the colors of the graph. You can use #000000 to #FFFFFF or you can type in common colors
+				threshold: [{ // you can set as many thresholds here as you want. The thresholds are what allow you to have the graph change color if the y value is below a certain amount
+					below: 0,//if below 20
+					color: 'RED'// then the color is red
+				/*}, {
+					below: 70, //if below 70
+					color: 'YELLOW'// then the color is yellow*/
+				}]
+			}];
+			var fOptions={
+				grid: { hoverable: false, clickable: false }, 
+				xaxis: {
+					min: oldestX,
+					//ticks: 2,		
+					ticks:  Math.ceil(nData/100), 
+					tickFormatter: function (val) {  
+						var xdate = new Date(val); 
+						return xdate.toString("HH:mm<br>M/d");
+					}
+				},
+				yaxis: {
+					//min: 0, // This allows you to set the min and max values to be graphed. you can also set the min and max for the xaxis as well.
+					 
+					ticks: 5 
+				}
+			};
+			pruneChart(entry);
+			if ( nData < limit ) {
+				$("#cont"+entry).width(50+(nData*4));
+			}
+			if ( '-1' == disabled.indexOf( parseInt(entry) ) ) {
+				console.log("plotting chart "+entry);
+				plots[entry]=$.plot("#placeholder"+entry, data, fOptions);
+			}
+
+		}
+	}
+
+}
+
+function pruneChart(channel){
+
+	/* limit is the most amount of data we can hold in the chart. */
+	var cutOffTime= (new Date().getTime())-(limit*10*1000);//limit(amount of packets)*10(seconds per packet)*1000(ms per sec).
+	while ( null != dataArray[channel] && dataArray[channel].length > 0 && cutOffTime > dataArray[channel][0][0] ) {
+		dataArray[channel].shift();
+	}	
+
+}
+
+function plot(){//This is similar to updateCharts, except this is used to also add the placeholders and containers to the page
+	console.log("creating charts with order");
+	var sortAr=findChartOrder();
+	
+	for ( var entry in sortAr ) {
+	    if ( sortAr.hasOwnProperty(entry) ) {
+			addChart(sortAr[entry].id);
+			console.log("adding "+sortAr[entry].id);
+		}
+	}
+	//console.log(descArray);
+
+	for ( var entry in dataArray ) {
+	    if ( dataArray.hasOwnProperty(entry) ) {
+		 //console.log("Key is " + entry + ", value is " + dataArray[entry]);
+	 	
+		displayData = dataArray[entry][0][1];
+		var title = entry;
+		var units = "";
+		var precision = 0;
+		if ( descArray.hasOwnProperty(entry) ) {
+			title = descArray[entry].title;
+			units = descArray[entry].units;	
+			precision = descArray[entry].precision
+		}else{
+			console.log("adding "+entry+"(no order specified)");
+			addChart(entry);
+		}
+		
+
+		if ( 0 <= precision ) {
+			displayData=displayData.toFixed(precision);
+		}else{
+			var x = Math.pow(10,Math.abs(precision));
+			displayData = Math.round(displayData/x)*x;
+		}
+		
+		$('#floaty'+entry).html(title+":<br>"+displayData+" "+units);
+		var data=[{
+			data: dataArray[entry],
+			bars: {
+				show: true,
+				barWidth: 90,
+				fill: 1,
+				align: "center"
+			},			
+	
+			//},
+			color: 'BLUE', // this marks the colors of the graph. You can use #000000 to #FFFFFF or you can type in common colors
+			threshold: [{ // you can set as many thresholds here as you want. The thresholds are what allow you to have the graph change color if the y value is below a certain amount
+				below: 0,//if below 20
+				color: 'RED'// then the color is red
+			/*}, {
+				below: 70, //if below 70
+				color: 'YELLOW'// then the color is yellow*/
+			}]
+		}];
+		var fOptions={
+			grid: { hoverable: false, clickable: false }, 
+			xaxis: {
+				min: oldestX,
+				ticks: 2,		
+				//ticks:  ceil(nData/100), 
+				tickFormatter: function (val) {  
+					var xdate = new Date(val); 
+					return xdate.toString("HH:mm<br>M/d");
+				}
+			},
+			yaxis: {
+				//min: 0, // This allows you to set the min and max values to be graphed. you can also set the min and max for the xaxis as well.
+				 
+				ticks: 5 
+			}
+		};
+
+		$("#cont"+entry).width(50+(nData*4));
+			
+		if ( -1 == disabled.indexOf( parseInt(entry) ) ) {
+			console.log("plotting chart "+entry);
+			plots[entry]=$.plot("#placeholder"+entry, data, fOptions);
+		}
+		$( "#drag"+entry ).draggable({ axis: "y" });
+		$( "#drag"+entry ).data({
+			'originalLeft': $("#drag"+entry).css('left'),
+			'origionalTop': $("#drag"+entry).css('top')
+		});
+		//console.log("left: "+$("#draggable").css('left')+", top: "+$("#draggable").css('top'));
+
+
+	   }
+	
+	}
+}
+
+function timerTick(){
+	$('#timer').html("Timer: "+time);
+	
+	time+=1;
+	//loadData();
+	setTimeout(timerTick,1000); //one second timer for updating the timer (no other functionality)
+}
+
+function titleTick(){
+
+	loadTitleDataMin();	
+	setTimeout(titleTick,1000*60); //once a minute
+
+}
+
+function compare(a,b) {
+	if ( a.sortOrder < b.sortOrder )
+		return -1;
+	if ( a.sortOrder > b.sortOrder )
+		return 1;
+	return 0;
+}
+
+function findChartOrder() {
+	
+	var tempAr = [];//= descArray;
+	for ( var key in descArray ) {
+	    if ( descArray.hasOwnProperty(key) ) {
+			tempAr.push(descArray[key]);
+		}
+
+	}
+	tempAr.sort(compare);
+
+	//console.log(tempAr);
+	return tempAr;
+	
+}
+
+function loadTick(){ //every ten seconds it queries the JSON page
+	//$('#timer').html(time);
+	
+	time=0;
+	loadData();
+	setTimeout(loadTick,1000*10); //ten seconds for updating the data 
+}
+
+var showFloat=true;
+
+function hideFloaty(){ //should be called toggle floaty or something because this toggles the visibility
+	if ( showFloat ) {	
+		$(".floaty").hide(1000);
+		$("#showhide").html("show");
+	} else {
+		$(".floaty").show(1000);
+		$("#showhide").html("hide");
+	}
+	showFloat=!showFloat;
+}
+
+function resetDrags(){
+	for ( var key in dataArray ) {
+		if ( dataArray.hasOwnProperty(key) ) {
+			$("#drag"+key).css({
+				'left': $("#drag"+key).data('originalLeft'),
+				'top': $("#drag"+key).data('origionalTop')
+			});	
+		}
+	}
+}
+
+var draggable = true;
+function lockDrags(){
+		
+	for ( var key in dataArray ) {
+		if ( dataArray.hasOwnProperty(key) ) {
+			if ( draggable ) {
+				$("#drag"+key).draggable( 'disable' );
+				$("#lockBut").html("unlock dragging charts");
+			}else{
+				$("#drag"+key).draggable( 'enable' );
+				$("#lockBut").html("lock dragging charts");
+			}	
+		}
+	}
+	draggable=!draggable;
+}
+
+$( document ).ready(function() {
+	
+	$("#cover").show();
+	$( "#floaty" ).draggable(); //this is what makes the current value box draggable
+	loadTitleData();
+	timerTick();
+	$( document ).ajaxError(function(event){
+		console.log("no response from json");
+		$("#connection_warn").show();
+		$("#connection_warn").append(event);
+		$("#cover").hide();
+	});
+
+	$(window).scroll(function(){
+		
+		$('.float-title').css(
+			'left', $(this).scrollLeft() + 15 
+		);
+		
+	});
+
+});
+function disableChannel(channel){
+
+	disabled.push(channel);
+	$('#drag'+channel).hide();
+	$('#pFlo'+channel).hide();
+
+}
+
+function scrollToLeft(){
+	if ( scroll ) {
+		leftScroll = $(document).outerWidth() - $(window).width();
+		$('body, html').scrollLeft(leftScroll);
+	}
+}
+
+function hideWarn(){
+	$("#connection_warn").hide();
+}
+function scrollToggle(){
+	scroll = !scroll;
+	if ( scroll ) {
+		$('#scrollBut').html("Disable auto-scroll");
+	}else{
+		$('#scrollBut').html("Focus on current data");
+	}
+}
+
+</script>
+</head>
+<body>
+<div id="cover"><h1 id="loading" style="color: white; text-align: center">Loading<br>Please Wait</h1></div>
+<div id="connection_warn" style="text-align: center; width: 800px; margin-right: auto; margin-left: auto; background-color: orange; color: white; display: none;" onclick="hideWarn()">
+	<h1>No Response From Server</h1>
+</div>
+<span class="float-title">
+	<!--
+	<button onclick="loadDataFirst()">first</button>
+	<button onclick="loadData()">add</button>
+	<button onclick="plot()">plot</button>
+	<button onclick="updateCharts()">update charts</button>
+	<button onclick="loadTitleData()">test</button>
+	<button id="sortBut" onclick="findChartOrder()">sort</button>
+	-->
+	<button id="scrollBut" onclick="scrollToggle()">Disable auto-scroll</button>
+	<button id="lockBut" onclick="lockDrags()">lock dragging charts</button>
+	<button onclick="resetDrags()">reset chart positions</button>
+	<span id="ndata">nData: 0</span>
+</span>
+<div id="wrapper" style="position: relative; top: 50px;">
+	<!--<h1 id="timer"></h1>-->
+	
+</div>
+<div id="floaty" title="This box can be dragged around">
+	<h4 style="color:white;padding-left:20px;padding-right:20px;padding-bottom:10px;">Current Values <button onclick="hideFloaty()" style="font-size:.5em;" id="showhide">hide</button></h4>
+	<span id="timer" style="padding-left: 20px;" ></span>
+</div>
+</body>
+</html>
