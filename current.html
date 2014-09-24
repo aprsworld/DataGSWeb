@@ -9,13 +9,14 @@ TABLE{
 
 table, td, th {
     border: 1px solid #1A3380;
+
 }
 
 TH{
-
 	background-color: #3366FF;
 	color:#FFFFFF;
 	padding: 10px;
+
 }
 TD{
 	background-color: #FFFFFF;
@@ -26,11 +27,8 @@ TD{
 #floaty{
 	background-color: #3366FF;
 	color:#FFFFFF;
-	
 	position: fixed;
 	border: 2px solid #1A3380;
-	
-	
 	
 }
 
@@ -41,6 +39,7 @@ TD{
 }
 .tickLabel{
 	width:30px;
+
 }
 .float-title{
 	width: 800px;
@@ -79,12 +78,10 @@ function timerTick(){
 	$('#timer').html("Timer: "+time);
 	
 	time+=1;
-	//loadData();
 	setTimeout(timerTick,1000); //one second timer for updating the timer (no other functionality)
 }
 
 function loadTick(){
-	
 	time = 0;
 	loadData();
 	setTimeout(loadTick,1000*10); //ten seconds
@@ -92,7 +89,6 @@ function loadTick(){
 }
 
 function loadTitleData(){//gets title information and descriptions of the data
-
 	var url = urlTitles;
 	
 	$.getJSON(url, 
@@ -110,25 +106,35 @@ function loadTitleData(){//gets title information and descriptions of the data
 function loadData(){ //loads data from JSON and updates the page
 	var url = urlNow;
 	var count=0;
-	//console.log(descArray);	
-	//$('#floatyCont').html("");
 	$.getJSON(url, 
 		function(data) {
 			data.data.forEach(function(entry){	
-				//console.log(entry);
 				var title=descArray[entry.channel].title;
-				var displayData = entry.avg;
+				var displayDataTime = getDateStr(entry.time);
+				var displayDataAvg = entry.avg;
+				var displayDataMin = entry.min;
+				var displayDataMax = entry.max;
+				var displayDataStd = entry.stddev;
 				var precision = descArray[entry.channel].precision;
 				if ( 0 <= precision ) {
-					displayData=displayData.toFixed(precision);
+					displayDataAvg=displayDataAvg.toFixed(precision);
+					displayDataMin=displayDataMin.toFixed(precision);
+					displayDataMax=displayDataMax.toFixed(precision);
+					displayDataStd=displayDataStd.toFixed(precision);
 				}else{
 					var x = Math.pow(10,Math.abs(precision));
-					displayData = Math.round(displayData/x)*x;
+					displayDataAvg=Math.round(displayDataAvg/x)*x;
+					displayDataMin=Math.round(displayDataMin/x)*x;
+					displayDataMax=Math.round(displayDataMax/x)*x;
+					displayDataStd=Math.round(displayDataStd/x)*x;
 				}
 				var units = descArray[entry.channel].units;
 
-				var flHtml=displayData+" "+units;		
-				$('#pFlo'+entry.channel).html(flHtml);
+				$('#dTime'+entry.channel).html(displayDataTime);
+				$('#pFlo'+entry.channel).html(displayDataAvg+" "+units);
+				$('#dMin'+entry.channel).html(displayDataMin+" "+units);
+				$('#dMax'+entry.channel).html(displayDataMax+" "+units);
+				$('#dStd'+entry.channel).html(displayDataStd+" "+units);
 
 
 			});
@@ -140,41 +146,50 @@ function loadData(){ //loads data from JSON and updates the page
 function loadDataFirst(){ //loads data from JSON and updates the page
 	var url = urlNow;
 	var count=0;
-	//console.log(descArray);	
-	$('#floatyCont').html('<table id="table"></table>');
-	console.log(1);
+	$('#floatyCont').html('<table id="table"><tr><th></th><th>Data Date</th><th>Min</th><th>Max</th><th>AVG</th><th>StdDev</th></tr></table>');
+	//console.log(1);
 	$.getJSON(url, 
 		function(data) {
 			data.data.forEach(function(entry){	
-				console.log(entry.channel);
+				//console.log(entry.channel);
 				var title=descArray[entry.channel].title;
-				var displayData = entry.avg;
+				var displayDataTime = getDateStr(entry.time);
+				var displayDataAvg = entry.avg;
+				var displayDataMin = entry.min;
+				var displayDataMax = entry.max;
+				var displayDataStd = entry.stddev;
 				var precision = descArray[entry.channel].precision;
 				if ( 0 <= precision ) {
-					displayData=displayData.toFixed(precision);
+					displayDataAvg=displayDataAvg.toFixed(precision);
+					displayDataMin=displayDataMin.toFixed(precision);
+					displayDataMax=displayDataMax.toFixed(precision);
+					displayDataStd=displayDataStd.toFixed(precision);
 				}else{
 					var x = Math.pow(10,Math.abs(precision));
-					displayData = Math.round(displayData/x)*x;
+					displayDataAvg=Math.round(displayDataAvg/x)*x;
+					displayDataMin=Math.round(displayDataMin/x)*x;
+					displayDataMax=Math.round(displayDataMax/x)*x;
+					displayDataStd=Math.round(displayDataStd/x)*x;
 				}
-
-
-				
 				var units = descArray[entry.channel].units;
-				var flHtml='<tr><th>'+title+':</th><td id="pFlo'+entry.channel+'">'+displayData+' '+units+'</td>';		
+				var flHtml='<tr><th>'+title+':</th><td id="dTime'+entry.channel+'">'+displayDataTime+'</td><td id="dMin'+entry.channel+'">'+displayDataMin+' '+units+'</td><td id="dMax'+entry.channel+'">'+displayDataMax+' '+units+'</td><td id="pFlo'+entry.channel+'">'+displayDataAvg+' '+units+'</td><td id="dStd'+entry.channel+'">'+displayDataStd+'</td></tr>';		
 				$('#table').append(flHtml);
 			});
-			console.log(2);
-			//$('#floatyCont').append("</table>");
+			//console.log(2);
 			loadTick();
 	});
 	
 }
 
-$( document ).ready(function() {
+function getDateStr(time){
+	var d = new Date(time);
+	var n = d.getFullYear()+"-"+('0'+(d.getMonth()+1)).slice(-2)+"-"+d.getDate()+" "+('0'+(d.getHours())).slice(-2)+":"+('0'+(d.getMinutes())).slice(-2)+":"+('0'+(d.getSeconds())).slice(-2)+" UTC";
+	return n;
+}
 
+$( document ).ready(function() {
 	loadTitleData();
 	timerTick();
-	//loadTick();
 
 });
 </script>
@@ -184,7 +199,6 @@ $( document ).ready(function() {
 
 <div id="floaty" >
 	<h4 style="text-align: center;padding-left:10px;padding-right:10px;">Current Values<span id="timer" style="padding-left: 20px; font-size: .75em;" ></span></h4>
-	
 	<span id='floatyCont'></span>
 </div>
 </body>
