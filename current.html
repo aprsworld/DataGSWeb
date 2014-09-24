@@ -1,0 +1,187 @@
+<html>
+<head>
+<style>
+
+TABLE{
+	border-collapse: collapse;
+
+}
+
+TH{
+
+	background-color: #3366FF;
+	color:#FFFFFF;
+	padding: 10px;
+}
+TD{
+	background-color: #FFFFFF;
+	color:#000000;
+	padding: 10px;
+
+}
+#floaty{
+	background-color: #3366FF;
+	color:#FFFFFF;
+	
+	position: fixed;
+	border: 2px solid #1A3380;
+	
+	
+	
+}
+
+.floaty{
+	padding-left: 30px;
+	padding-right: 30px;
+
+}
+.tickLabel{
+	width:30px;
+}
+.float-title{
+	width: 800px;
+	left: 15px;
+	position: absolute;
+	  
+}
+
+.float-button{
+	width:100px;
+	left:500px;
+	position: absolute;
+	
+}
+
+</style>
+
+<script language="javascript" type="text/javascript" src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jQueryRotate.2.2.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/date.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.core.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.widget.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.mouse.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.draggable.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.flot.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.flot.threshold.js"></script>
+<script>
+
+const urlNow = "http://208.82.71.253:8080/now.json";
+const urlTitles = "http://208.82.71.253:8080/channels.json";
+
+var time = 0;
+var descArray = [];
+
+function timerTick(){
+	$('#timer').html("Timer: "+time);
+	
+	time+=1;
+	//loadData();
+	setTimeout(timerTick,1000); //one second timer for updating the timer (no other functionality)
+}
+
+function loadTick(){
+	
+	time = 0;
+	loadData();
+	setTimeout(loadTick,1000*10); //ten seconds
+
+}
+
+function loadTitleData(){//gets title information and descriptions of the data
+
+	var url = urlTitles;
+	
+	$.getJSON(url, 
+		function(data) {
+			data.data.forEach(function(entry){	
+				descArray[entry.id]=entry;
+			});
+
+			loadDataFirst()
+		
+	});
+	
+}
+
+function loadData(){ //loads data from JSON and updates the page
+	var url = urlNow;
+	var count=0;
+	//console.log(descArray);	
+	//$('#floatyCont').html("");
+	$.getJSON(url, 
+		function(data) {
+			data.data.forEach(function(entry){	
+				//console.log(entry);
+				var title=descArray[entry.channel].title;
+				var displayData = entry.avg;
+				var precision = descArray[entry.channel].precision;
+				if ( 0 <= precision ) {
+					displayData=displayData.toFixed(precision);
+				}else{
+					var x = Math.pow(10,Math.abs(precision));
+					displayData = Math.round(displayData/x)*x;
+				}
+				var units = descArray[entry.channel].units;
+
+				var flHtml=displayData+" "+units;		
+				$('#pFlo'+entry.channel).html(flHtml);
+
+
+			});
+
+	});
+	
+}
+
+function loadDataFirst(){ //loads data from JSON and updates the page
+	var url = urlNow;
+	var count=0;
+	//console.log(descArray);	
+	$('#floatyCont').html('<table id="table"></table>');
+	console.log(1);
+	$.getJSON(url, 
+		function(data) {
+			data.data.forEach(function(entry){	
+				console.log(entry.channel);
+				var title=descArray[entry.channel].title;
+				var displayData = entry.avg;
+				var precision = descArray[entry.channel].precision;
+				if ( 0 <= precision ) {
+					displayData=displayData.toFixed(precision);
+				}else{
+					var x = Math.pow(10,Math.abs(precision));
+					displayData = Math.round(displayData/x)*x;
+				}
+
+
+				
+				var units = descArray[entry.channel].units;
+				var flHtml='<tr><th>'+title+':</th><td id="pFlo'+entry.channel+'">'+displayData+' '+units+'</td>';		
+				$('#table').append(flHtml);
+			});
+			console.log(2);
+			//$('#floatyCont').append("</table>");
+			loadTick();
+	});
+	
+}
+
+$( document ).ready(function() {
+
+	loadTitleData();
+	timerTick();
+	//loadTick();
+
+});
+</script>
+</head>
+<body>
+
+
+<div id="floaty" >
+	<h4 style="text-align: center;padding-left:10px;padding-right:10px;">Current Values<span id="timer" style="padding-left: 20px; font-size: .75em;" ></span></h4>
+	
+	<span id='floatyCont'></span>
+</div>
+</body>
+</html>
