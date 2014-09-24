@@ -53,21 +53,21 @@
 
 </style>
 
-<script language="javascript" type="text/javascript" src="resources/jquery-1.11.1.min.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jQueryRotate.2.2.js"></script>
-<script language="javascript" type="text/javascript" src="resources/date.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.ui.core.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.ui.widget.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.ui.mouse.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.ui.draggable.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.flot.js"></script>
-<script language="javascript" type="text/javascript" src="resources/jquery.flot.threshold.js"></script>
+<script language="javascript" type="text/javascript" src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jQueryRotate.2.2.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/date.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.core.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.widget.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.mouse.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.ui.draggable.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.flot.js"></script>
+<script language="javascript" type="text/javascript" src="http://ian.aprsworld.com//data/jquery.flot.threshold.js"></script>
 
 <script>
 
-const urlNow = "http://192.168.10.130:8080/now.json";
-const urlTitles = "http://192.168.10.130:8080/channels.json";
-const urlHistory = "http://192.168.10.130:8080/history.json";
+const urlNow = "http://208.82.71.253:8080/now.json";
+const urlTitles = "http://208.82.71.253:8080/channels.json";
+const urlHistory = "http://208.82.71.253:8080/history.json";
 const limit = 4320;//this number chosen because it is the amount of packets that will arrive within twelve hours. 6(packets a minute)*60(minutes an hour)*12(for twelve hours)
 var dataArray=[];
 var descArray=[];
@@ -79,6 +79,7 @@ var time=0;
 var chartCount=0;
 var leftScroll = 0;
 var scroll=true;
+var loadTimerVar;
 
 function loadData(){ //loads data from JSON and updates the page
 	var url = urlNow;
@@ -175,6 +176,7 @@ function loadHistory(){
 			loadTick();
 			scrollToLeft();
 			$("#cover").hide();
+			clearInterval(loadTimerVar);
 			console.log("Completed");
 	});
 
@@ -499,9 +501,31 @@ function lockDrags(){
 	draggable=!draggable;
 }
 
+function loadTimer(){
+	
+	switch(time%4){
+	case 0: 
+		$('#loading').html("Loading Data<br>Please Wait");
+		break;
+	case 1:
+		$('#loading').html("Loading Data.<br>Please Wait");
+		break;
+	case 2:
+		$('#loading').html("Loading Data..<br>Please Wait");
+		break;
+	case 3:
+		$('#loading').html("Loading Data...<br>Please Wait");
+		break;
+	}
+	console.log("tick");
+	loadTimerVar = setTimeout(loadTimer,1000); //update once a second 
+}
+
+
 $( document ).ready(function() {
 	
 	$("#cover").show();
+	loadTimer();
 	$( "#floaty" ).draggable(); //this is what makes the current value box draggable
 	loadTitleData();
 	timerTick();
@@ -510,6 +534,7 @@ $( document ).ready(function() {
 		$("#connection_warn").show();
 		$("#connection_warn").append(event);
 		$("#cover").hide();
+		clearInterval(loadTimerVar);
 	});
 
 	$(window).scroll(function(){
@@ -551,7 +576,7 @@ function scrollToggle(){
 </script>
 </head>
 <body>
-<div id="cover"><h1 id="loading" style="color: white; text-align: center">Loading<br>Please Wait</h1></div>
+<div id="cover"><h1 id="loading" style="color: white; text-align: center">Loading Data<br>Please Wait</h1></div>
 <div id="connection_warn" style="text-align: center; width: 800px; margin-right: auto; margin-left: auto; background-color: orange; color: white; display: none;" onclick="hideWarn()">
 	<h1>No Response From Server</h1>
 </div>
