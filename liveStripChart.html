@@ -80,6 +80,7 @@ var chartCount=0;
 var leftScroll = 0;
 var scroll=true;
 var loadTimerVar;
+var cutOffTime;
 
 function loadData(){ //loads data from JSON and updates the page
 	var url = urlNow;
@@ -298,6 +299,8 @@ function updateCharts(){//this updates the charts.
 			pruneChart(entry);
 			if ( nData < limit ) {
 				$("#cont"+entry).width(50+(nData*4));
+			} else {
+				$("#cont"+entry).width(50+(limit*4));
 			}
 			if ( '-1' == disabled.indexOf( parseInt(entry) ) ) {
 				console.log("plotting chart "+entry);
@@ -312,10 +315,11 @@ function updateCharts(){//this updates the charts.
 function pruneChart(channel){
 
 	/* limit is the most amount of data we can hold in the chart. */
-	var cutOffTime= (new Date().getTime())-(limit*10*1000);//limit(amount of packets)*10(seconds per packet)*1000(ms per sec).
+	cutOffTime= (new Date().getTime())-(limit*10*1000);//limit(amount of packets)*10(seconds per packet)*1000(ms per sec).
 	while ( null != dataArray[channel] && dataArray[channel].length > 0 && cutOffTime > dataArray[channel][0][0] ) {
 		dataArray[channel].shift();
 	}	
+	oldestX=cutOffTime;
 
 }
 
@@ -394,7 +398,11 @@ function plot(){//This is similar to updateCharts, except this is used to also a
 			}
 		};
 
-		$("#cont"+entry).width(50+(nData*4));
+		if ( nData < limit ) {
+				$("#cont"+entry).width(50+(nData*4));
+			} else {
+				$("#cont"+entry).width(50+(limit*4));
+			}
 			
 		if ( -1 == disabled.indexOf( parseInt(entry) ) ) {
 			console.log("plotting chart "+entry);
