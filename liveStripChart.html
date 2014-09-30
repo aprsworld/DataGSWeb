@@ -92,14 +92,14 @@ function loadData(){ //loads data from JSON and updates the page
 				if ( -1 == disabled.indexOf(parseInt( entry["channel"]) ) ) {
 				//var tempAr=dataArray[entry["channel"]];
 					if ( null == dataArray[entry["channel"]] ) {
-					 	//console.log("adding chart");					
+					 	console.log("x"+entry["channel"]);					
 					
 						tempAr=[];
 						tempAr[0]=[entry["time"],entry["avg"]];
 						//addChart(entry["channel"]);
 						dataArray[entry["channel"]]=tempAr;
 						$("#wrapper").html("");
-						plot();
+						//plot();
 					}else{
 						tempAr=[entry["time"],entry["avg"]];
 						dataArray[entry["channel"]].push(tempAr);
@@ -174,7 +174,7 @@ function loadHistory(){
 			plot();
 			$('#ndata').html("nData: "+nData);
 		//	setTimeout(loadTick, 1000*10);
-			loadTick();
+			
 			scrollToLeft();
 			$("#cover").hide();
 			clearInterval(loadTimerVar);
@@ -211,32 +211,24 @@ function addChart(entry){
 			units = descArray[entry].units;	
 			precision = descArray[entry].precision
 		}
-		//displayData = dataArray[entry][0][1];
-		/*
-		if ( precision >= 0 ) {
-			displayData=displayData.toFixed(precision);
-		}else{
-			var x = Math.pow(10,Math.abs(precision));
-			displayData = Math.round(displayData/x)*x;
-		}
-		*/
+
 		var html='<span id="drag'+entry+'"><h4 class="float-title">'+title+'</h4><div id="cont'+entry+'" style="width: 50px; height: 150px; padding: 40px 15px 15px 15px;"><div id="placeholder'+entry+'" style="width: 100%; height: 100%; font-size: 14px; line-height: 1em;"></div></div></span>'; 
 		var flHtml='<p class="floaty" id="pFlo'+entry+'"><span id="floaty'+entry+'"></span><button style="float:right;" onclick="disableChannel('+entry+')">disable</button></p>';		
-		$('#wrapper').append(html);
-		$('#floaty').append(flHtml);
+		if($("#drag" + entry).length == 0 ) {
+			$('#wrapper').append(html);
+		} else {
+			console.log("already exists");
+		}
+		if($("#pFlo" + entry).length == 0 ) {
+			$('#floaty').append(flHtml);
+		} else {
+			console.log("already exists");
+		}
 		//$('#floaty'+entry).html(title+":<br>"+displayData+" "+units);
 	}
 }
 
 function updateCharts(){//this updates the charts.
-	
-
-	/*plots.forEach(function(entry){ //doesn't work, may still use some of this code as a starting point
-		entry.setData();
-		entry.draw();	
-
-	});*/
-
 	
 	for ( var entry in dataArray ) {
 		if ( dataArray.hasOwnProperty(entry) ) {
@@ -268,15 +260,10 @@ function updateCharts(){//this updates the charts.
 					fill: 1,
 					align: "center"
 				},			
-	
-				//},
 				color: 'BLUE', // this marks the colors of the graph. You can use #000000 to #FFFFFF or you can type in common colors
 				threshold: [{ // you can set as many thresholds here as you want. The thresholds are what allow you to have the graph change color if the y value is below a certain amount
 					below: 0,//if below 20
 					color: 'RED'// then the color is red
-				/*}, {
-					below: 70, //if below 70
-					color: 'YELLOW'// then the color is yellow*/
 				}]
 			}];
 			var fOptions={
@@ -291,8 +278,6 @@ function updateCharts(){//this updates the charts.
 					}
 				},
 				yaxis: {
-					//min: 0, // This allows you to set the min and max values to be graphed. you can also set the min and max for the xaxis as well.
-					 
 					ticks: 5 
 				}
 			};
@@ -303,7 +288,6 @@ function updateCharts(){//this updates the charts.
 				$("#cont"+entry).width(50+(limit*4));
 			}
 			if ( '-1' == disabled.indexOf( parseInt(entry) ) ) {
-				console.log("plotting chart "+entry);
 				plots[entry]=$.plot("#placeholder"+entry, data, fOptions);
 			}
 
@@ -316,6 +300,7 @@ function pruneChart(channel){
 
 	/* limit is the most amount of data we can hold in the chart. */
 	cutOffTime= (new Date().getTime())-(limit*10*1000);//limit(amount of packets)*10(seconds per packet)*1000(ms per sec).
+	dataArray[channel].sort();	
 	while ( null != dataArray[channel] && dataArray[channel].length > 0 && cutOffTime > dataArray[channel][0][0] ) {
 		dataArray[channel].shift();
 	}	
@@ -330,7 +315,8 @@ function plot(){//This is similar to updateCharts, except this is used to also a
 	for ( var entry in sortAr ) {
 	    if ( sortAr.hasOwnProperty(entry) ) {
 			addChart(sortAr[entry].id);
-			console.log("adding "+sortAr[entry].id);
+			console.log("addingx "+sortAr[entry].id);
+			//} else {console.log("notadding");}
 		}
 	}
 	//console.log(descArray);
@@ -405,7 +391,6 @@ function plot(){//This is similar to updateCharts, except this is used to also a
 			}
 			
 		if ( -1 == disabled.indexOf( parseInt(entry) ) ) {
-			console.log("plotting chart "+entry);
 			plots[entry]=$.plot("#placeholder"+entry, data, fOptions);
 		}
 		$( "#drag"+entry ).draggable({ axis: "y" });
@@ -414,18 +399,19 @@ function plot(){//This is similar to updateCharts, except this is used to also a
 			'origionalTop': $("#drag"+entry).css('top')
 		});
 		//console.log("left: "+$("#draggable").css('left')+", top: "+$("#draggable").css('top'));
-
-
 	   }
 	
 	}
 }
 
 function timerTick(){
-	$('#timer').html("Timer: "+time);
+	if ( 1 == time ) {	
+		$('#timer').html(time+" second");
+	}else{
+		$('#timer').html(time+" seconds");
+	}
 	
 	time+=1;
-	//loadData();
 	setTimeout(timerTick,1000); //one second timer for updating the timer (no other functionality)
 }
 
@@ -461,8 +447,6 @@ function findChartOrder() {
 }
 
 function loadTick(){ //every ten seconds it queries the JSON page
-	//$('#timer').html(time);
-	
 	time=0;
 	loadData();
 	setTimeout(loadTick,1000*10); //ten seconds for updating the data 
@@ -536,6 +520,7 @@ $( document ).ready(function() {
 	loadTimer();
 	$( "#floaty" ).draggable(); //this is what makes the current value box draggable
 	loadTitleData();
+	loadTick();
 	timerTick();
 	$( document ).ajaxError(function(event){
 		console.log("no response from json");
@@ -604,11 +589,14 @@ function scrollToggle(){
 </span>
 <div id="wrapper" style="position: relative; top: 50px;">
 	<!--<h1 id="timer"></h1>-->
-	
 </div>
 <div id="floaty" title="This box can be dragged around">
 	<h4 style="color:white;padding-left:20px;padding-right:20px;padding-bottom:10px;">Current Values <button onclick="hideFloaty()" style="font-size:.5em;" id="showhide">hide</button></h4>
-	<span id="timer" style="padding-left: 20px;" ></span>
+	
+</div>
+<div style="width: 100%; position: fixed; bottom: 0; left: 0; z-index: 2; background: #e0e0e0; text-align: center;">
+		<span style="margin-left: 10px; float: left;" id="port_interval">Updated aproximately <span id="timer">Loading...</span> ago</span>
+	</div>
 </div>
 </body>
 </html>

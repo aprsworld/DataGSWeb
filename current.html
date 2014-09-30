@@ -75,8 +75,11 @@ var time = 0;
 var descArray = [];
 
 function timerTick(){
-	$('#timer').html("Timer: "+time);
-	
+	if ( 1 == time ) {	
+		$('#timer').html(time+" second");
+	}else{
+		$('#timer').html(time+" seconds");
+	}
 	time+=1;
 	setTimeout(timerTick,1000); //one second timer for updating the timer (no other functionality)
 }
@@ -117,20 +120,20 @@ function loadData(){ //loads data from JSON and updates the page
 				var displayDataStd = entry.stddev;
 				var precision = descArray[entry.channel].precision;
 				if ( 0 <= precision ) {
-					displayDataAvg=displayDataAvg.toFixed(precision);
-					displayDataMin=displayDataMin.toFixed(precision);
-					displayDataMax=displayDataMax.toFixed(precision);
-					displayDataStd=displayDataStd.toFixed(precision);
+					displayDataAvg=commaSeparateNumber(displayDataAvg.toFixed(precision));
+					displayDataMin=commaSeparateNumber(displayDataMin.toFixed(precision));
+					displayDataMax=commaSeparateNumber(displayDataMax.toFixed(precision));
+					displayDataStd=commaSeparateNumber(displayDataStd.toFixed(precision));
 				}else{
 					var x = Math.pow(10,Math.abs(precision));
-					displayDataAvg=Math.round(displayDataAvg/x)*x;
-					displayDataMin=Math.round(displayDataMin/x)*x;
-					displayDataMax=Math.round(displayDataMax/x)*x;
-					displayDataStd=Math.round(displayDataStd/x)*x;
+					displayDataAvg=commaSeparateNumber(Math.round(displayDataAvg/x)*x);
+					displayDataMin=commaSeparateNumber(Math.round(displayDataMin/x)*x);
+					displayDataMax=commaSeparateNumber(Math.round(displayDataMax/x)*x);
+					displayDataStd=commaSeparateNumber(Math.round(displayDataStd/x)*x);
 				}
 				var units = descArray[entry.channel].units;
 
-				$('#dTime'+entry.channel).html(displayDataTime);
+				$('#dTime').html(displayDataTime);
 				$('#pFlo'+entry.channel).html(displayDataAvg+" "+units);
 				$('#dMin'+entry.channel).html(displayDataMin+" "+units);
 				$('#dMax'+entry.channel).html(displayDataMax+" "+units);
@@ -146,8 +149,9 @@ function loadData(){ //loads data from JSON and updates the page
 function loadDataFirst(){ //loads data from JSON and updates the page
 	var url = urlNow;
 	var count=0;
-	$('#floatyCont').html('<table id="table"><tr><th></th><th>Data Date</th><th>Min</th><th>Max</th><th>AVG</th><th>StdDev</th></tr></table>');
+	$('#floatyCont').html('<table id="table"></table>');
 	//console.log(1);
+	$('#table').append('<tr><th>Data Date:</th><td colspan="5" id="dTime"></td></tr><tr><th></th><th>AVG</th><th>Min</th><th>Max</th><th>StdDev</th></tr>');
 	$.getJSON(url, 
 		function(data) {
 			data.data.forEach(function(entry){	
@@ -160,19 +164,19 @@ function loadDataFirst(){ //loads data from JSON and updates the page
 				var displayDataStd = entry.stddev;
 				var precision = descArray[entry.channel].precision;
 				if ( 0 <= precision ) {
-					displayDataAvg=displayDataAvg.toFixed(precision);
-					displayDataMin=displayDataMin.toFixed(precision);
-					displayDataMax=displayDataMax.toFixed(precision);
-					displayDataStd=displayDataStd.toFixed(precision);
+					displayDataAvg=commaSeparateNumber(displayDataAvg.toFixed(precision));
+					displayDataMin=commaSeparateNumber(displayDataMin.toFixed(precision));
+					displayDataMax=commaSeparateNumber(displayDataMax.toFixed(precision));
+					displayDataStd=commaSeparateNumber(displayDataStd.toFixed(precision));
 				}else{
 					var x = Math.pow(10,Math.abs(precision));
-					displayDataAvg=Math.round(displayDataAvg/x)*x;
-					displayDataMin=Math.round(displayDataMin/x)*x;
-					displayDataMax=Math.round(displayDataMax/x)*x;
-					displayDataStd=Math.round(displayDataStd/x)*x;
+					displayDataAvg=commaSeparateNumber(Math.round(displayDataAvg/x)*x);
+					displayDataMin=commaSeparateNumber(Math.round(displayDataMin/x)*x);
+					displayDataMax=commaSeparateNumber(Math.round(displayDataMax/x)*x);
+					displayDataStd=commaSeparateNumber(Math.round(displayDataStd/x)*x);
 				}
 				var units = descArray[entry.channel].units;
-				var flHtml='<tr><th>'+title+':</th><td id="dTime'+entry.channel+'">'+displayDataTime+'</td><td id="dMin'+entry.channel+'">'+displayDataMin+' '+units+'</td><td id="dMax'+entry.channel+'">'+displayDataMax+' '+units+'</td><td id="pFlo'+entry.channel+'">'+displayDataAvg+' '+units+'</td><td id="dStd'+entry.channel+'">'+displayDataStd+'</td></tr>';		
+				var flHtml='<tr><th>'+title+':</th><td id="pFlo'+entry.channel+'">'+displayDataAvg+' '+units+'</td><td id="dMin'+entry.channel+'">'+displayDataMin+' '+units+'</td><td id="dMax'+entry.channel+'">'+displayDataMax+' '+units+'</td><td id="dStd'+entry.channel+'">'+displayDataStd+'</td></tr>';		
 				$('#table').append(flHtml);
 			});
 			//console.log(2);
@@ -187,6 +191,14 @@ function getDateStr(time){
 	return n;
 }
 
+function commaSeparateNumber(val){
+		if(null != val){
+			while (/(\d+)(\d{3})/.test(val.toString())){
+				val = val.toString().replace(/(\d+)(\d{3})/, '$1'+','+'$2');
+			}
+		}
+		return val;
+	}
 $( document ).ready(function() {
 	loadTitleData();
 	timerTick();
@@ -198,8 +210,12 @@ $( document ).ready(function() {
 
 
 <div id="floaty" >
-	<h4 style="text-align: center;padding-left:10px;padding-right:10px;">Current Values<span id="timer" style="padding-left: 20px; font-size: .75em;" ></span></h4>
+	<h4 style="text-align: center;padding-left:10px;padding-right:10px;">Current Values</h4>
 	<span id='floatyCont'></span>
+</div>
+<div style="width: 100%; position: fixed; bottom: 0; left: 0; z-index: 2; background: #e0e0e0; text-align: center;">
+		<span style="margin-left: 10px; float: left;" id="port_interval">Updated aproximately <span id="timer">Loading...</span> ago</span>
+	</div>
 </div>
 </body>
 </html>
